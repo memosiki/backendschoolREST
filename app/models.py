@@ -1,3 +1,5 @@
+import collections
+
 from app import db
 from app.config import DATEFORMAT
 
@@ -8,7 +10,7 @@ association_table = db.Table('relation', db.Model.metadata,
                              db.UniqueConstraint('id1', 'id2', name='unique_relation'))
 
 
-# adjacency list. That is you have a table with foreign key to itself.
+# Adjacency list. A table with foreign key to itself.
 class Citizen(db.Model):
     __tablename__ = 'citizens'
 
@@ -33,18 +35,17 @@ class Citizen(db.Model):
     def __repr__(self):
         return "{}:{} has {}" \
             .format(self.import_id, self.citizen_id, len(self.relatives))
-        # return "{}->{}".format(self.citizen_id, len(self.relatives))
 
-    def to_dict(self) -> dict:
-        return {
-            'citizen_id': self.citizen_id,
-            'town': self.town,
-            'street': self.street,
-            'building': self.building,
-            'apartment': self.apartment,
-            'name': self.name,
-            'birth_date': self.birth_date.strftime(DATEFORMAT),
-            'gender': self.gender,
-            'relatives': [rel.citizen_id for rel in
-                          self.relatives]
-        }
+    def to_dict(self) -> collections.OrderedDict:
+        return collections.OrderedDict([
+            ('citizen_id', self.citizen_id),
+            ('town', self.town),
+            ('street', self.street),
+            ('building', self.building),
+            ('apartment', self.apartment),
+            ('name', self.name),
+            ('birth_date', self.birth_date.strftime(DATEFORMAT)),
+            ('gender', self.gender),
+            ('relatives', [rel.citizen_id for rel in
+                           self.relatives])
+        ])
