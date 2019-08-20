@@ -12,6 +12,3 @@ migrate = Migrate(app, db)
 from app import routes
 
 # The bottom import is a workaround to circular imports, a common problem with Flask applications.
-
-if __name__ == '__main__':
-    app.run(debug=True)

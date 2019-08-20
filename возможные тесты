@@ -8,3 +8,7 @@
 для дальнейшего развития
 почитать про архитектуру
 как вариант -- orm из marshmallow напрямую отражать в модель и в бд
+
+зависимости:
+sudo apt install python3-flask
+pip3 install flask flask-sqlalchemy flask-migrate marshmallow numpy
