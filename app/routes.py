@@ -3,7 +3,7 @@ from app.models import Citizen
 from app.config import DATEFORMAT
 from app import validate
 from app.validate import InputDataSchema, PatchCitizenSchema
-from datetime import datetime, date
+from datetime import datetime
 import uuid
 
 from flask import request, abort, jsonify
@@ -20,6 +20,7 @@ def post_imports():
     if not request.json:
         abort(400)
     errors = InputDataSchema().validate(request.json)
+
     if errors:
         # arguable decision to send information with advices how to structure request right
         # but i assume the exact route is unknown for anyone beside authorized personnel
@@ -128,9 +129,9 @@ def get_percentile(import_id):
         ages = [calculate_age(elem.birth_date) for elem in bdays_by_town]
         response.append({
             'town': town,
-            'p50': round(percentile(ages, 50)),
-            'p75': round(percentile(ages, 75)),
-            'p99': round(percentile(ages, 99)),
+            'p50': round(percentile(ages, 50, interpolation='linear')),
+            'p75': round(percentile(ages, 75, interpolation='linear')),
+            'p99': round(percentile(ages, 99, interpolation='linear')),
         })
     return jsonify({'data': response}), 200
 

@@ -63,14 +63,18 @@ class CitizenSchema(PatchCitizenSchema):
 
 class InputDataSchema(Schema):
     # /import - POST
-    citizens = fields.Nested(CitizenSchema, many=True, required=True)
-
-    @validates('citizens')
-    def unique_citizen_id(self, value):
-        # checks if citizen ids is unique
+    #
+    def unique_citizen_id(value):
+        # checks if citizen ids are unique
         ids = [c['citizen_id'] for c in value]
         if len(ids) != len(set(ids)):
-            raise ValidationError('Citizen ids is not unique.')
+            raise ValidationError('Citizen ids are not unique.')
+
+    # using validate= param instead of @validates so CitizenSchema validation occurs first
+    # after this it is guaranteed that parameter value has required structure
+    # and no KeyError and TypeError exceptions will occur during validation
+    # This very behaviour is important only with nested schemes
+    citizens = fields.Nested(CitizenSchema, many=True, required=True, validate=unique_citizen_id)
 
 
 def import_present(import_id: int) -> bool:

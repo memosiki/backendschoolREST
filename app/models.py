@@ -1,4 +1,4 @@
-import collections
+# from collections.abc import OrderedDict
 
 from app import db
 from app.config import DATEFORMAT
@@ -36,8 +36,8 @@ class Citizen(db.Model):
         return "{}:{} has {}" \
             .format(self.import_id, self.citizen_id, len(self.relatives))
 
-    def to_dict(self) -> collections.OrderedDict:
-        return collections.OrderedDict([
+    def to_dict(self) -> dict:
+        return dict([
             ('citizen_id', self.citizen_id),
             ('town', self.town),
             ('street', self.street),

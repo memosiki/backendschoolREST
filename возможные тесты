@@ -12,3 +12,6 @@
 зависимости:
 sudo apt install python3-flask
 pip3 install flask flask-sqlalchemy flask-migrate marshmallow numpy
+
+для тестов
+pip3 install pytest pytest-timeout
