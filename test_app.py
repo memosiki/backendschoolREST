@@ -117,7 +117,7 @@ def test_large_data(client):
         original_data = json.load(f)
     rv = client.post('/imports', data=json.dumps(original_data),
                      content_type='application/json')
-    if rv.status_code != 200:
+    if rv.status_code != 201:
         print(rv.data)
     assert rv.status_code == 201
 

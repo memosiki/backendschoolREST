@@ -3,9 +3,9 @@ from random import choice, randint, random
 from string import ascii_lowercase
 from datetime import datetime
 
-n = 10000  # number of citizens
-k = 100  # ~ number of relations between them
-file_name = 'citizens2.json'  # filename
+n = 1000  # number of citizens
+k = 1100  # ~ number of relations between them
+file_name = 'citizens3.json'  # filename
 
 towns = ["Москва", "С.Петербург", "Свинбург",
          "Алексеево", "Олександрово", "Берлин",
