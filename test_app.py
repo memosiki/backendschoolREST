@@ -110,15 +110,14 @@ def test_imports_3(client):
         assert c1 == c2
 
 
-# @pytest.mark.timeout(10)
+@pytest.mark.timeout(10)
 def test_large_data(client):
     # test adding a few clients
     with open('tests/citizens2.json') as f:
         original_data = json.load(f)
     rv = client.post('/imports', data=json.dumps(original_data),
                      content_type='application/json')
-    if rv.status_code != 201:
-        print(rv.data)
+
     assert rv.status_code == 201
 
     # checking how data added

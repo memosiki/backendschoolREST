@@ -32,63 +32,88 @@ def post_imports():
         import_id += 1
     else:
         import_id = 1
+    relations = {}
+    for person in request.json['citizens']:
+        person['birth_date'] = datetime.strptime(person['birth_date'], DATEFORMAT)
+        person['import_id'] = import_id
+
+        # person['relatives']
+
+        citizen = Citizen(**person)
+        db.session.add(citizen)
+        relations[citizen.citizen_id] = citizen.relatives.copy()
+
+    # relation validation
+    # ids is unique -- it was checked by InputDataSchema().validate() at th start
+    try:
+        for citizen, relatives in relations.items():
+            for relative in relatives:
+                if relative == citizen:
+                    abort(400, 'Citizen {} is relatives with himself.'.format(relative))
+                if citizen not in relations[relative]:
+                    abort(400, 'Relation between citizens {} and {} is one-sided.'.format(relative, citizen))
+    except KeyError:
+        abort(400, 'Relations is malformed')
+    # if abort occurs db.session rollbacks by itself
+    db.session.commit()
+    return jsonify({'data': {"import_id": import_id}}), 201
 
     # try:
     # storing citizen ids of created and initialized citizens
     # (btw it is not good decision to store references to rows in table
     # because there are less than 2000 relations so it is no more than 2000 additional
     # table lookups, and citizens count is around 10'000 )
-    created = set()
-    initialized = set()
-    for person in request.json['citizens']:
-        # adding fields to store in database as separate imports
-        relatives = person['relatives'].copy()
-        person.pop('relatives')
-
-        person['birth_date'] = datetime.strptime(person['birth_date'], DATEFORMAT)
-        person['import_id'] = import_id
-
-        citizen_id = person['citizen_id']
-        if citizen_id in created:
-            if citizen_id in initialized:
-                # 'Citizen id {} is not unique'.format(citizen_id)
-                abort(400)
-            citizen = Citizen.query.filter_by(import_id=import_id, citizen_id=citizen_id)
-            citizen.update(person)
-            citizen: Citizen = citizen.one()  # from query to Citizen
-            initialized.add(citizen_id)
-        else:
-            citizen = Citizen(**person)
-            db.session.add(citizen)
-            created.add(citizen_id)
-            initialized.add(citizen_id)
-
-        relative_id: int
-        for relative_id in relatives:
-            if relative_id == citizen_id:
-                # Citizen {} is relatives with himself.'.format(relative)
-                abort(400)
-
-            if relative_id not in created:
-                relative = Citizen(import_id=import_id, citizen_id=relative_id)
-                db.session.add(relative)
-                created.add(relative_id)
-            else:
-                relative = Citizen.query.filter_by(import_id=import_id, citizen_id=relative_id).one()
-                if relative_id in initialized and citizen not in relative.relatives:
-                    # 'Relation between citizens {} and {} is one-sided.'.format(relative_id, citizen_id))
-                    abort(400)
-
-            citizen.relatives.append(relative)
-    if created != initialized:
-        # 'Relations is malformed'
-        abort(400)
-
-    # except (MultipleResultsFound, NoResultFound, ValueError) as e:
-    #     db.session.rollback()
-    #     abort(400, str(e))
-    db.session.commit()
-    return jsonify({'data': {"import_id": import_id}}), 201
+    # created = set()
+    # initialized = set()
+    # for person in request.json['citizens']:
+    #     # adding fields to store in database as separate imports
+    #     relatives = person['relatives'].copy()
+    #     person.pop('relatives')
+    #
+    #     person['birth_date'] = datetime.strptime(person['birth_date'], DATEFORMAT)
+    #     person['import_id'] = import_id
+    #
+    #     citizen_id = person['citizen_id']
+    #     if citizen_id in created:
+    #         if citizen_id in initialized:
+    #             # 'Citizen id {} is not unique'.format(citizen_id)
+    #             abort(400)
+    #         citizen = Citizen.query.filter_by(import_id=import_id, citizen_id=citizen_id)
+    #         citizen.update(person)
+    #         citizen: Citizen = citizen.one()  # from query to Citizen
+    #         initialized.add(citizen_id)
+    #     else:
+    #         citizen = Citizen(**person)
+    #         db.session.add(citizen)
+    #         created.add(citizen_id)
+    #         initialized.add(citizen_id)
+    #
+    #     relative_id: int
+    #     for relative_id in relatives:
+    #         if relative_id == citizen_id:
+    #             # Citizen {} is relatives with himself.'.format(relative)
+    #             abort(400)
+    #
+    #         if relative_id not in created:
+    #             relative = Citizen(import_id=import_id, citizen_id=relative_id)
+    #             db.session.add(relative)
+    #             created.add(relative_id)
+    #         else:
+    #             relative = Citizen.query.filter_by(import_id=import_id, citizen_id=relative_id).one()
+    #             if relative_id in initialized and citizen not in relative.relatives:
+    #                 # 'Relation between citizens {} and {} is one-sided.'.format(relative_id, citizen_id))
+    #                 abort(400)
+    #
+    #         citizen.relatives.append(relative)
+    # if created != initialized:
+    #     # 'Relations is malformed'
+    #     abort(400)
+    #
+    # # except (MultipleResultsFound, NoResultFound, ValueError) as e:
+    # #     db.session.rollback()
+    # #     abort(400, str(e))
+    # db.session.commit()
+    # return jsonify({'data': {"import_id": import_id}}), 201
 
 
 @app.route('/imports/<int:import_id>/citizens', methods=['GET'])
@@ -98,7 +123,7 @@ def get_import(import_id):
 
     citizens = Citizen.query.filter_by(import_id=import_id).all()
     citizens = [c.to_dict() for c in citizens]
-    return jsonify({'data': citizens}), 200
+    return {'data': citizens}, 200
 
 
 @app.route('/imports/<int:import_id>/citizens/birthdays', methods=['GET'])
@@ -106,16 +131,16 @@ def get_birthdays(import_id):
     if not validate.import_present(import_id):
         abort(400)
 
-    import_query = db.session.query(Citizen).filter_by(import_id=import_id)
-    months = range(1, 12 + 1)
-    response = {i: [] for i in months}
-    for citizen in import_query:
-        for month in months:
-            count = len(list(filter(lambda p: p.birth_date.month == month, citizen.relatives)))
-            if count:
-                response[month].append({"citizen_id": citizen.citizen_id,
-                                        "presents": count})
-    return jsonify({'data': response}), 200
+    # import_query = db.session.query(Citizen).filter_by(import_id=import_id)
+    # months = range(1, 12 + 1)
+    # response = {i: [] for i in months}
+    # for citizen in import_query:
+    #     for month in months:
+    #         count = len(list(filter(lambda p: p.birth_date.month == month, citizen.relatives)))
+    #         if count:
+    #             response[month].append({"citizen_id": citizen.citizen_id,
+    #                                     "presents": count})
+    # return jsonify({'data': response}), 200
 
     # import_query = db.session.query(Citizen).filter_by(import_id=import_id)
     # months = list(range(12))
@@ -135,20 +160,20 @@ def get_birthdays(import_id):
     #            }
     #        }, 200
 
-    # response = {}
-    # months = list(range(1, 12 + 1))
-    # import_query = db.session.query(Citizen).filter_by(import_id=import_id)
-    # for month in months:
-    #     month_query = import_query.filter(db.extract('month', Citizen.birth_date) == month)
-    #     count = {}
-    #     for citizen in month_query:
-    #         for relative in citizen.relatives:
-    #             if relative.citizen_id in count:
-    #                 count[relative.citizen_id] += 1
-    #             else:
-    #                 count[relative.citizen_id] = 1
-    #     response[str(month)] = [{'citizen_id': cid, 'presents': val} for cid, val in count.items()]
-    # return {'data': response}, 200
+    response = {}
+    months = list(range(1, 12 + 1))
+    import_query = db.session.query(Citizen).filter_by(import_id=import_id)
+    for month in months:
+        month_query = import_query.filter(db.extract('month', Citizen.birth_date) == month)
+        month_count = {}
+        for citizen in month_query:
+            for relative in citizen.relatives:
+                if relative in month_count:
+                    month_count[relative] += 1
+                else:
+                    month_count[relative] = 1
+        response[str(month)] = [{'citizen_id': cid, 'presents': val} for cid, val in month_count.items()]
+    return {'data': response}, 200
 
 
 @app.route('/imports/<int:import_id>/towns/stat/percentile/age', methods=['GET'])
@@ -174,9 +199,9 @@ def get_percentile(import_id):
         ages = [calculate_age(elem.birth_date) for elem in bdays_by_town]
         response.append({
             'town': town,
-            'p50': round(percentile(ages, 50, interpolation='linear')),
-            'p75': round(percentile(ages, 75, interpolation='linear')),
-            'p99': round(percentile(ages, 99, interpolation='linear')),
+            'p50': round(percentile(ages, 50, interpolation='linear'), 2),
+            'p75': round(percentile(ages, 75, interpolation='linear'), 2),
+            'p99': round(percentile(ages, 99, interpolation='linear'), 2),
         })
     return jsonify({'data': response}), 200
 
@@ -193,34 +218,37 @@ def patch_modify(import_id, citizen_id):
     changes = request.json
     try:
         mod_citizen = Citizen.query.filter_by(import_id=import_id, citizen_id=citizen_id).one()
+        mod_citizen_id = citizen_id
 
-        if 'relatives' in changes:
-
-            if citizen_id in changes['relatives']:
-                raise ValueError('Citizen {} is relatives with himself.'.format(citizen_id))
-
-            disconnect_persons = set(p.citizen_id for p in mod_citizen.connected) \
-                                 - set(changes['relatives'])
-            connect_persons = set(changes['relatives']) \
-                              - set(p.citizen_id for p in mod_citizen.connected)
-            for person_id in disconnect_persons:
-                person = Citizen.query.filter_by(import_id=import_id, citizen_id=person_id).one()
-                person.relatives.remove(mod_citizen)
-            for person_id in connect_persons:
-                person = Citizen.query.filter_by(import_id=import_id, citizen_id=person_id).one()
-                person.relatives.append(mod_citizen)
-
-            # clearing all relations this person receives
-            # and adding all relations from request
-            mod_citizen.relatives.clear()
-            for person_id in changes['relatives']:
-                person = Citizen.query.filter_by(import_id=import_id, citizen_id=person_id).one()
-                mod_citizen.relatives.append(person)
         for field, val in changes.items():
-            if field not in {'relatives', 'birth_date'}:
+            if field == 'birth_date':
+                mod_citizen.birth_date = datetime.strptime(val, DATEFORMAT)
+            elif field == 'relatives':
+                if citizen_id in changes['relatives']:
+                    raise ValueError('Citizen {} is relatives with himself.'.format(citizen_id))
+
+                disconnect_persons = set(mod_citizen.relatives) \
+                                     - set(changes['relatives'])
+                connect_persons = set(changes['relatives']) \
+                                  - set(mod_citizen.relatives)
+                for person_id in disconnect_persons:
+                    person = Citizen.query.filter_by(import_id=import_id, citizen_id=person_id).one()
+                    rel = person.relatives.copy()
+                    rel.remove(mod_citizen_id)
+                    person.relatives = rel
+                for person_id in connect_persons:
+                    person = Citizen.query.filter_by(import_id=import_id, citizen_id=person_id).one()
+                    rel = person.relatives.copy()
+                    rel.append(mod_citizen_id)
+                    person.relatives = rel
+
+                mod_citizen.relatives = changes['relatives']
+                # mod_citizen.relatives.clear()
+                # for person_id in changes['relatives']:
+                #     person = Citizen.query.filter_by(import_id=import_id, citizen_id=person_id).one()
+                #     mod_citizen.relatives.append(person)
+            else:
                 setattr(mod_citizen, field, val)
-            elif field == 'birth_date':
-                mod_citizen.birth_date = datetime.strptime(changes['birth_date'], DATEFORMAT)
 
     except (MultipleResultsFound, NoResultFound, ValueError) as e:
         db.session.rollback()

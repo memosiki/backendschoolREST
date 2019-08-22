@@ -1,21 +1,24 @@
 # from collections.abc import OrderedDict
+import json
+import sqlalchemy.types as types
 
-from app import db
+from app import app, db
 from app.config import DATEFORMAT
 from uuid import uuid1
 
+
 # Many to many relations
-association_table = db.Table('relation', db.Model.metadata,
-                             db.Column('uuid1', db.Integer, db.ForeignKey('citizens.uuid'), index=True),
-                             db.Column('uuid2', db.Integer, db.ForeignKey('citizens.uuid')),
-                             db.UniqueConstraint('uuid1', 'uuid2', name='unique_relation'))
+# relatives_table = db.Table('relation', db.Model.metadata,
+#                            db.Column('uuid1', db.Integer, db.ForeignKey('citizens.uuid'), index=True),
+#                            db.Column('uuid2', db.Integer, db.ForeignKey('citizens.uuid')),
+#                            db.UniqueConstraint('uuid1', 'uuid2', name='unique_relation'))
+#
 
 
 def generate_uuid():
     return str(uuid1())
 
 
-# Adjacency list. A table with foreign key to itself.
 class Citizen(db.Model):
     __tablename__ = 'citizens'
 
@@ -32,14 +35,16 @@ class Citizen(db.Model):
     birth_date = db.Column(db.DateTime)
     gender = db.Column(db.String)
 
-    relatives = db.relationship('Citizen', secondary=association_table,
-                                primaryjoin=uuid == association_table.c.uuid1,
-                                secondaryjoin=uuid == association_table.c.uuid2,
-                                backref='connected')
+    # relatives = db.relationship('Citizen', secondary=relatives_table,
+    #                             primaryjoin=uuid == relatives_table.c.uuid1,
+    #                             secondaryjoin=uuid == relatives_table.c.uuid2,
+    #                             backref='connected')
 
-    # def __repr__(self):
-    #     return "{}:{} has {}" \
-    #         .format(self.import_id, self.citizen_id, len(self.relatives))
+    # storing relatives as serialized Python list
+    # its much faster to do either than storing relatives as many-to-many relations in database
+    # and works well for any route
+    # really depends on problem but this fits okay
+    relatives = db.Column(db.PickleType)
 
     def to_dict(self) -> dict:
         return dict([
@@ -51,6 +56,5 @@ class Citizen(db.Model):
             ('name', self.name),
             ('birth_date', self.birth_date.strftime(DATEFORMAT)),
             ('gender', self.gender),
-            ('relatives', [rel.citizen_id for rel in
-                           self.relatives])
+            ('relatives', self.relatives)
         ])
