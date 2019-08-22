@@ -3,9 +3,9 @@ from random import choice, randint, random
 from string import ascii_lowercase
 from datetime import datetime
 
-n = 1000  # number of citizens
+n = 10000  # number of citizens
 k = 1100  # ~ number of relations between them
-file_name = 'citizens3.json'  # filename
+file_name = 'citizens2.json'  # filename
 
 towns = ["Москва", "С.Петербург", "Свинбург",
          "Алексеево", "Олександрово", "Берлин",
@@ -57,5 +57,5 @@ for emitter, receiver in zip(emitters, receivers):
         citizens[receiver - 1]['relatives'].append(emitter)
         citizens[emitter - 1]['relatives'].append(receiver)
 
-with open(file_name, 'w') as outfile:
-    json.dump({'citizens': citizens}, outfile)
+with open(file_name, 'w', encoding='utf8') as outfile:
+    json.dump({'citizens': citizens}, outfile, ensure_ascii=False)

@@ -120,8 +120,7 @@ def post_imports():
 def get_import(import_id):
     if not validate.import_present(import_id):
         abort(400)
-
-    citizens = Citizen.query.filter_by(import_id=import_id).all()
+    citizens = Citizen.query.filter_by(import_id=import_id)
     citizens = [c.to_dict() for c in citizens]
     return {'data': citizens}, 200
 
@@ -233,6 +232,7 @@ def patch_modify(import_id, citizen_id):
                                   - set(mod_citizen.relatives)
                 for person_id in disconnect_persons:
                     person = Citizen.query.filter_by(import_id=import_id, citizen_id=person_id).one()
+                    # workaround so orm will detect changes in python list
                     rel = person.relatives.copy()
                     rel.remove(mod_citizen_id)
                     person.relatives = rel
@@ -251,6 +251,7 @@ def patch_modify(import_id, citizen_id):
                 setattr(mod_citizen, field, val)
 
     except (MultipleResultsFound, NoResultFound, ValueError) as e:
+        # Results except when query is malformed
         db.session.rollback()
         abort(400, str(e))
     else:

@@ -9,7 +9,7 @@ app.config.from_object(Config)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-db.create_all()
+# db.create_all()
 
 from app import routes
 

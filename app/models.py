@@ -47,14 +47,14 @@ class Citizen(db.Model):
     relatives = db.Column(db.PickleType)
 
     def to_dict(self) -> dict:
-        return dict([
-            ('citizen_id', self.citizen_id),
-            ('town', self.town),
-            ('street', self.street),
-            ('building', self.building),
-            ('apartment', self.apartment),
-            ('name', self.name),
-            ('birth_date', self.birth_date.strftime(DATEFORMAT)),
-            ('gender', self.gender),
-            ('relatives', self.relatives)
-        ])
+        return dict(
+            citizen_id=self.citizen_id,
+            town=self.town,
+            street=self.street,
+            building=self.building,
+            apartment=self.apartment,
+            name=self.name,
+            birth_date=self.birth_date.strftime(DATEFORMAT),
+            gender=self.gender,
+            relatives=self.relatives
+        )
