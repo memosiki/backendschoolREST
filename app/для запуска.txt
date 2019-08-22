@@ -1,7 +1,0 @@
-Eсли ранее приложение не запускалось, необходимо инициализоровать базу данных:
-flask db init
-flask db migrate
-flask db upgrade
-
-Запуск приложения
-flask run

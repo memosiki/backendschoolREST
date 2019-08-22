@@ -1,3 +1,4 @@
-idea/*
-app/app.db
+.idea
+.pytest_cache
+app/*.db
 app/migrations

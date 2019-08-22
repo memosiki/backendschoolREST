@@ -1,11 +1,11 @@
-from app import db
-from app.models import Citizen
-from app.config import DATEFORMAT
+from datetime import datetime
 
 from marshmallow import Schema, fields, validates, ValidationError
 from marshmallow import validate
 
-from datetime import datetime
+from app import db
+from app.models import Citizen
+from app.config import DATEFORMAT
 
 
 # schemes used only for validation
@@ -71,9 +71,9 @@ class InputDataSchema(Schema):
             raise ValidationError('Citizen ids are not unique.')
 
     # using validate= param instead of @validates so CitizenSchema validation occurs first
-    # after this it is guaranteed that parameter value has required structure
+    # after this it is guaranteed that element has required structure
     # and no KeyError and TypeError exceptions will occur during validation
-    # This very behaviour is important only with nested schemes
+    # This very behaviour is only important with nested schemes
     citizens = fields.Nested(CitizenSchema, many=True, required=True, validate=unique_citizen_id)
 
 

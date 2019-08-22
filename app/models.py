@@ -1,10 +1,8 @@
-# from collections.abc import OrderedDict
-import json
-import sqlalchemy.types as types
-
-from app import app, db
-from app.config import DATEFORMAT
 from uuid import uuid1
+
+from app import db
+from app.config import DATEFORMAT
+
 
 
 # Many to many relations

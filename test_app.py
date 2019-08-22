@@ -1,6 +1,6 @@
 import json
 
-from app import app
+from app import app, db
 import os
 import tempfile
 
@@ -9,14 +9,20 @@ import pytest
 
 @pytest.fixture
 def client():
-    db_fd, app.config['DATABASE'] = tempfile.mkstemp()
+    # creating /tmp database for tests
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    db_fd, database_name = tempfile.mkstemp()
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, database_name)
     app.config['TESTING'] = True
-    client = app.test_client()
+    db.create_all()
 
+    client = app.test_client()
     yield client
 
+    db.session.remove()
+    db.drop_all()
     os.close(db_fd)
-    os.unlink(app.config['DATABASE'])
+    os.unlink(database_name)
 
 
 def test_relation_validation(client):

@@ -1,14 +1,15 @@
+import time
+from datetime import datetime
+
+from flask import request, abort, jsonify
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
+from numpy import percentile  # for percentiles
+
 from app import app, db
 from app.models import Citizen
 from app.config import DATEFORMAT
 from app import validate
 from app.validate import InputDataSchema, PatchCitizenSchema
-from datetime import datetime
-
-from flask import request, abort, jsonify
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-
-from numpy import percentile  # for percentiles
 
 
 @app.route('/imports', methods=['POST'])
@@ -44,7 +45,7 @@ def post_imports():
         relations[citizen.citizen_id] = citizen.relatives.copy()
 
     # relation validation
-    # ids is unique -- it was checked by InputDataSchema().validate() at th start
+    # ids is unique -- it was checked by InputDataSchema().validate() at the start
     try:
         for citizen, relatives in relations.items():
             for relative in relatives:
@@ -54,66 +55,9 @@ def post_imports():
                     abort(400, 'Relation between citizens {} and {} is one-sided.'.format(relative, citizen))
     except KeyError:
         abort(400, 'Relations is malformed')
-    # if abort occurs db.session rollbacks by itself
+    # if abort occurs, db.session rollbacks by itself
     db.session.commit()
     return jsonify({'data': {"import_id": import_id}}), 201
-
-    # try:
-    # storing citizen ids of created and initialized citizens
-    # (btw it is not good decision to store references to rows in table
-    # because there are less than 2000 relations so it is no more than 2000 additional
-    # table lookups, and citizens count is around 10'000 )
-    # created = set()
-    # initialized = set()
-    # for person in request.json['citizens']:
-    #     # adding fields to store in database as separate imports
-    #     relatives = person['relatives'].copy()
-    #     person.pop('relatives')
-    #
-    #     person['birth_date'] = datetime.strptime(person['birth_date'], DATEFORMAT)
-    #     person['import_id'] = import_id
-    #
-    #     citizen_id = person['citizen_id']
-    #     if citizen_id in created:
-    #         if citizen_id in initialized:
-    #             # 'Citizen id {} is not unique'.format(citizen_id)
-    #             abort(400)
-    #         citizen = Citizen.query.filter_by(import_id=import_id, citizen_id=citizen_id)
-    #         citizen.update(person)
-    #         citizen: Citizen = citizen.one()  # from query to Citizen
-    #         initialized.add(citizen_id)
-    #     else:
-    #         citizen = Citizen(**person)
-    #         db.session.add(citizen)
-    #         created.add(citizen_id)
-    #         initialized.add(citizen_id)
-    #
-    #     relative_id: int
-    #     for relative_id in relatives:
-    #         if relative_id == citizen_id:
-    #             # Citizen {} is relatives with himself.'.format(relative)
-    #             abort(400)
-    #
-    #         if relative_id not in created:
-    #             relative = Citizen(import_id=import_id, citizen_id=relative_id)
-    #             db.session.add(relative)
-    #             created.add(relative_id)
-    #         else:
-    #             relative = Citizen.query.filter_by(import_id=import_id, citizen_id=relative_id).one()
-    #             if relative_id in initialized and citizen not in relative.relatives:
-    #                 # 'Relation between citizens {} and {} is one-sided.'.format(relative_id, citizen_id))
-    #                 abort(400)
-    #
-    #         citizen.relatives.append(relative)
-    # if created != initialized:
-    #     # 'Relations is malformed'
-    #     abort(400)
-    #
-    # # except (MultipleResultsFound, NoResultFound, ValueError) as e:
-    # #     db.session.rollback()
-    # #     abort(400, str(e))
-    # db.session.commit()
-    # return jsonify({'data': {"import_id": import_id}}), 201
 
 
 @app.route('/imports/<int:import_id>/citizens', methods=['GET'])
@@ -243,6 +187,9 @@ def patch_modify(import_id, citizen_id):
                     person.relatives = rel
 
                 mod_citizen.relatives = changes['relatives']
+                # changes['relatives'] has no incorrect values since
+                # new values were checked during queries
+
                 # mod_citizen.relatives.clear()
                 # for person_id in changes['relatives']:
                 #     person = Citizen.query.filter_by(import_id=import_id, citizen_id=person_id).one()
