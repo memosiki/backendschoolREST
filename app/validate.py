@@ -25,7 +25,7 @@ class PatchCitizenSchema(Schema):
         if not any(c.isalnum() for c in value):
             raise ValidationError('Field have to contain at least 1 letter or digit')
 
-    citizen_id = fields.Int(required=True, dump_only=True, validate=validate.Range(min=1))
+    citizen_id = fields.Int(required=True, dump_only=True, validate=validate.Range(min=0))
     town = fields.Str(required=True, validate=[validate.Length(1, 1000), has_one_letter_or_digit])
     street = fields.Str(required=True, validate=[validate.Length(1, 1000), has_one_letter_or_digit])
     building = fields.Str(required=True, validate=[validate.Length(1, 1000), has_one_letter_or_digit])
