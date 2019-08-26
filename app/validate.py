@@ -29,7 +29,7 @@ class PatchCitizenSchema(Schema):
     town = fields.Str(required=True, validate=[validate.Length(1, 1000), has_one_letter_or_digit])
     street = fields.Str(required=True, validate=[validate.Length(1, 1000), has_one_letter_or_digit])
     building = fields.Str(required=True, validate=[validate.Length(1, 1000), has_one_letter_or_digit])
-    apartment = fields.Int(required=True, validate=validate.Range(min=1))
+    apartment = fields.Int(required=True, validate=validate.Range(min=0))
     name = fields.Str(required=True, validate=validate.Length(min=1))
 
     birth_date = fields.DateTime(DATEFORMAT, required=True)
