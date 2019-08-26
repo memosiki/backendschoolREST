@@ -58,7 +58,7 @@ class CitizenSchema(PatchCitizenSchema):
     # inherit all the fields of PatchCitizenSchema
 
     # consider that changing citizen_id does not changes elements of relatives list
-    citizen_id = fields.Int(required=True, validate=validate.Range(min=1))
+    citizen_id = fields.Int(required=True, validate=validate.Range(min=0))
 
 
 class InputDataSchema(Schema):
