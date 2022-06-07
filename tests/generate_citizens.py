@@ -11,7 +11,7 @@ towns = ["Москва", "С.Петербург", "Свинбург",
          "Алексеево", "Олександрово", "Берлин",
          "Владивосток", "Архангельск"]
 
-alphabet = ".!,#" + ascii_lowercase + "".join(str(i) for i in range(10))
+alphabet = f".!,#{ascii_lowercase}" + "".join(str(i) for i in range(10))
 DATEFORMAT = "%d.%m.%Y"
 
 
@@ -28,6 +28,7 @@ def random_date(start, end):
 
 citizens = []
 
+relatives = []
 for citizen_id in range(1, n + 1):
     town = choice(towns)
     street = random_string(30)
@@ -36,7 +37,6 @@ for citizen_id in range(1, n + 1):
     name = '{0} {1}'.format(random_string(10).capitalize(), random_string(10).capitalize())
     birth_date = random_date('01.01.1901', '20.08.2019')
     gender = choice(['female', 'male'])
-    relatives = []
     citizens.append(dict(citizen_id=citizen_id,
                          town=town,
                          street=street,

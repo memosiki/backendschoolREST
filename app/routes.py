@@ -19,9 +19,7 @@ def post_imports():
     # (no citizen relations validation yet)
     if not request.json:
         abort(400)
-    errors = InputDataSchema().validate(request.json)
-
-    if errors:
+    if errors := InputDataSchema().validate(request.json):
         # arguable decision to send information with advices how to structure request right
         # but i assume the exact route is unknown for anyone beside authorized personnel
         abort(400, str(errors))
@@ -50,9 +48,9 @@ def post_imports():
         for citizen, relatives in relations.items():
             for relative in relatives:
                 if relative == citizen:
-                    abort(400, 'Citizen {} is relatives with himself.'.format(relative))
+                    abort(400, f'Citizen {relative} is relatives with himself.')
                 if citizen not in relations[relative]:
-                    abort(400, 'Relation between citizens {} and {} is one-sided.'.format(relative, citizen))
+                    abort(400, f'Relation between citizens {relative} and {citizen} is one-sided.')
     except KeyError:
         abort(400, 'Relations is malformed')
     # if abort occurs, db.session rollbacks by itself
@@ -155,8 +153,7 @@ def patch_modify(import_id, citizen_id):
         abort(400)
     if not request.json:
         abort(400)
-    errors = PatchCitizenSchema(partial=True).validate(request.json)
-    if errors:
+    if errors := PatchCitizenSchema(partial=True).validate(request.json):
         abort(400, str(errors))
     changes = request.json
     try:
@@ -168,7 +165,7 @@ def patch_modify(import_id, citizen_id):
                 mod_citizen.birth_date = datetime.strptime(val, DATEFORMAT)
             elif field == 'relatives':
                 if citizen_id in changes['relatives']:
-                    raise ValueError('Citizen {} is relatives with himself.'.format(citizen_id))
+                    raise ValueError(f'Citizen {citizen_id} is relatives with himself.')
 
                 disconnect_persons = set(mod_citizen.relatives) \
                                      - set(changes['relatives'])
@@ -187,13 +184,13 @@ def patch_modify(import_id, citizen_id):
                     person.relatives = rel
 
                 mod_citizen.relatives = changes['relatives']
-                # changes['relatives'] has no incorrect values since
-                # new values were checked during queries
+                            # changes['relatives'] has no incorrect values since
+                            # new values were checked during queries
 
-                # mod_citizen.relatives.clear()
-                # for person_id in changes['relatives']:
-                #     person = Citizen.query.filter_by(import_id=import_id, citizen_id=person_id).one()
-                #     mod_citizen.relatives.append(person)
+                            # mod_citizen.relatives.clear()
+                            # for person_id in changes['relatives']:
+                            #     person = Citizen.query.filter_by(import_id=import_id, citizen_id=person_id).one()
+                            #     mod_citizen.relatives.append(person)
             else:
                 setattr(mod_citizen, field, val)
 

@@ -12,13 +12,14 @@ def client():
     # creating /tmp database for tests
     basedir = os.path.abspath(os.path.dirname(__file__))
     db_fd, database_name = tempfile.mkstemp()
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, database_name)
+    app.config[
+        'SQLALCHEMY_DATABASE_URI'
+    ] = f'sqlite:///{os.path.join(basedir, database_name)}'
+
     app.config['TESTING'] = True
     db.create_all()
 
-    client = app.test_client()
-    yield client
-
+    yield app.test_client()
     db.session.remove()
     db.drop_all()
     os.close(db_fd)
@@ -61,7 +62,7 @@ def test_imports_1(client):
 
     # checking how data added
     import_id = json.loads(rv.data)['data']['import_id']
-    rv = client.get('/imports/{}/citizens'.format(import_id))
+    rv = client.get(f'/imports/{import_id}/citizens')
 
     assert rv.status_code == 200
 
@@ -87,7 +88,7 @@ def test_large_data(client):
 
     # checking how data added
     import_id = json.loads(rv.data)['data']['import_id']
-    rv = client.get('/imports/{}/citizens'.format(import_id))
+    rv = client.get(f'/imports/{import_id}/citizens')
 
     assert rv.status_code == 200
 
@@ -117,7 +118,7 @@ def test_preserving_characters(client):
     assert rv.status_code == 201
 
     import_id = json.loads(rv.data)['data']['import_id']
-    rv = client.get('/imports/{}/citizens'.format(import_id))
+    rv = client.get(f'/imports/{import_id}/citizens')
     assert rv.status_code == 200
 
     response_data = json.loads(rv.data)['data']
@@ -184,7 +185,7 @@ def test_imports_3(client):
     assert rv.status_code == 201
     # checking how data added
     import_id = json.loads(rv.data)['data']['import_id']
-    rv = client.get('/imports/{}/citizens'.format(import_id))
+    rv = client.get(f'/imports/{import_id}/citizens')
     assert rv.status_code == 200
     response_data = json.loads(rv.data)['data']
     original_data = original_data['citizens']
@@ -295,25 +296,35 @@ def test_birthdays_and_percentiles(client):
 
     import_id = json.loads(rv.data)['data']['import_id']
 
-    rv = client.get('/imports/{}/citizens'.format(import_id))
+    rv = client.get(f'/imports/{import_id}/citizens')
     assert rv.status_code == 200
 
     response_data = json.loads(rv.data)['data']
     original_data = original_data['citizens']
     assert response_data == original_data
 
-    rv = client.get('/imports/{}/citizens/birthdays'.format(import_id))
+    rv = client.get(f'/imports/{import_id}/citizens/birthdays')
     assert rv.status_code == 200
     assert json.loads(rv.data) == {
         "data": {"1": [], "2": [], "3": [], "4": [{"citizen_id": 1, "presents": 1}], "5": [], "6": [], "7": [], "8": [],
                  "9": [], "10": [], "11": [], "12": [{"citizen_id": 2, "presents": 1}]}}
 
-    rv = client.get('/imports/{}/towns/stat/percentile/age'.format(import_id))
+    rv = client.get(f'/imports/{import_id}/towns/stat/percentile/age')
     assert rv.status_code == 200
-    assert json.loads(rv.data) == {"data": [{"p50": 68.5, "p75": 93.25, "p99": 117.01, "town": "Москва"},
-                                            {"p50": 1, "p75": 1, "p99": 1, "town": "Керчь"}]} \
-           or json.loads(rv.data) == {"data": [{"p50": 1, "p75": 1, "p99": 1, "town": "Керчь"},
-                                               {"p50": 68.5, "p75": 93.25, "p99": 117.01, "town": "Москва"}]}
+    assert json.loads(rv.data) in [
+        {
+            "data": [
+                {"p50": 68.5, "p75": 93.25, "p99": 117.01, "town": "Москва"},
+                {"p50": 1, "p75": 1, "p99": 1, "town": "Керчь"},
+            ]
+        },
+        {
+            "data": [
+                {"p50": 1, "p75": 1, "p99": 1, "town": "Керчь"},
+                {"p50": 68.5, "p75": 93.25, "p99": 117.01, "town": "Москва"},
+            ]
+        },
+    ]
 
 
 def test_patch(client):
@@ -326,18 +337,26 @@ def test_patch(client):
     import_id = json.loads(rv.data)['data']['import_id']
     data = {"name": "Иванова Мария Леонидовна", "town": "Москва", "street": "Льва Толстого", "building": "16к7стр5",
             "apartment": 7, "relatives": [2]}
-    rv = client.patch('/imports/{}/citizens/1'.format(import_id), data=json.dumps(data),
-                      content_type='application/json')
+    rv = client.patch(
+        f'/imports/{import_id}/citizens/1',
+        data=json.dumps(data),
+        content_type='application/json',
+    )
+
     assert rv.status_code == 200
 
     ## testing relations
 
     # remove relation with cascade
     data = {"relatives": []}
-    rv = client.patch('/imports/{}/citizens/1'.format(import_id), data=json.dumps(data),
-                      content_type='application/json')
+    rv = client.patch(
+        f'/imports/{import_id}/citizens/1',
+        data=json.dumps(data),
+        content_type='application/json',
+    )
+
     assert rv.status_code == 200
-    rv = client.get('/imports/{}/citizens'.format(import_id))
+    rv = client.get(f'/imports/{import_id}/citizens')
     assert rv.status_code == 200
     response_data = json.loads(rv.data)['data']
     citizen_id = 1
@@ -346,10 +365,14 @@ def test_patch(client):
 
     # add relation with cascade
     data = {"relatives": [2, 3]}
-    rv = client.patch('/imports/{}/citizens/1'.format(import_id), data=json.dumps(data),
-                      content_type='application/json')
+    rv = client.patch(
+        f'/imports/{import_id}/citizens/1',
+        data=json.dumps(data),
+        content_type='application/json',
+    )
+
     assert rv.status_code == 200
-    rv = client.get('/imports/{}/citizens'.format(import_id))
+    rv = client.get(f'/imports/{import_id}/citizens')
     assert rv.status_code == 200
     response_data = json.loads(rv.data)['data']
     citizen_id = 1
@@ -359,42 +382,74 @@ def test_patch(client):
 
     # with themselves
     data = {"relatives": [1]}
-    rv = client.patch('/imports/{}/citizens/1'.format(import_id), data=json.dumps(data),
-                      content_type='application/json')
+    rv = client.patch(
+        f'/imports/{import_id}/citizens/1',
+        data=json.dumps(data),
+        content_type='application/json',
+    )
+
     assert rv.status_code == 400
 
     # wrong ids
     data = {"relatives": [999]}
-    rv = client.patch('/imports/{}/citizens/1'.format(import_id), data=json.dumps(data),
-                      content_type='application/json')
+    rv = client.patch(
+        f'/imports/{import_id}/citizens/1',
+        data=json.dumps(data),
+        content_type='application/json',
+    )
+
     assert rv.status_code == 400
 
     data = {"relatives": [0]}
-    rv = client.patch('/imports/{}/citizens/1'.format(import_id), data=json.dumps(data),
-                      content_type='application/json')
+    rv = client.patch(
+        f'/imports/{import_id}/citizens/1',
+        data=json.dumps(data),
+        content_type='application/json',
+    )
+
     assert rv.status_code == 400
 
     data = {"relatives": [-1]}
-    rv = client.patch('/imports/{}/citizens/1'.format(import_id), data=json.dumps(data),
-                      content_type='application/json')
+    rv = client.patch(
+        f'/imports/{import_id}/citizens/1',
+        data=json.dumps(data),
+        content_type='application/json',
+    )
+
     assert rv.status_code == 400
 
     data = {'citizen_id': 2}
-    rv = client.patch('/imports/{}/citizens/1'.format(import_id), data=json.dumps(data),
-                      content_type='application/json')
+    rv = client.patch(
+        f'/imports/{import_id}/citizens/1',
+        data=json.dumps(data),
+        content_type='application/json',
+    )
+
     assert rv.status_code == 400
 
     data = {'name': 2}
-    rv = client.patch('/imports/{}/citizens/1'.format(import_id), data=json.dumps(data),
-                      content_type='application/json')
+    rv = client.patch(
+        f'/imports/{import_id}/citizens/1',
+        data=json.dumps(data),
+        content_type='application/json',
+    )
+
     assert rv.status_code == 400
 
     data = {'name': 'Alex'}
-    rv = client.patch('/imports/{}/citizens/1'.format(import_id), data=json.dumps(data),
-                      content_type='application/json')
+    rv = client.patch(
+        f'/imports/{import_id}/citizens/1',
+        data=json.dumps(data),
+        content_type='application/json',
+    )
+
     assert rv.status_code == 200
 
     data = {"relatives": None}
-    rv = client.patch('/imports/{}/citizens/1'.format(import_id), data=json.dumps(data),
-                      content_type='application/json')
+    rv = client.patch(
+        f'/imports/{import_id}/citizens/1',
+        data=json.dumps(data),
+        content_type='application/json',
+    )
+
     assert rv.status_code == 400
