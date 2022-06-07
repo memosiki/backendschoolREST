@@ -21,7 +21,7 @@ class PatchCitizenSchema(Schema):
     # all strings should not exceed 1000 symbols
     # seems like a reasonable and sufficient amount for any field in this context
 
-    def has_one_letter_or_digit(value):
+    def has_one_letter_or_digit(self):
         if not any(c.isalnum() for c in value):
             raise ValidationError('Field have to contain at least 1 letter or digit')
 
@@ -64,7 +64,7 @@ class CitizenSchema(PatchCitizenSchema):
 class InputDataSchema(Schema):
     # /import - POST
     #
-    def unique_citizen_id(value):
+    def unique_citizen_id(self):
         # checks if citizen ids are unique
         ids = [c['citizen_id'] for c in value]
         if len(ids) != len(set(ids)):
